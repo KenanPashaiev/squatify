@@ -48,15 +48,15 @@ namespace UserService.API.Controllers
             return Ok(users);
         }
 
-        [HttpPost]
+        [HttpPost("Register")]
         public async Task<IActionResult> RegisterAsync(UserRegisterDto userRegisterDto)
         {
             var users = await userManager.RegisterAsync(userRegisterDto);
             return Ok(users);
         }
         
-        [HttpGet("Login")]
-        public async Task<IActionResult> LoginAsync([FromQuery]UserLoginDto userLoginDto)
+        [HttpPost("Login")]
+        public async Task<IActionResult> LoginAsync([FromBody]UserLoginDto userLoginDto)
         {
             var token = await userManager.LoginAsync(userLoginDto);
             if(token == null)

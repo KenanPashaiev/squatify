@@ -75,6 +75,10 @@ namespace UserService.BL.Managers
         public async Task<string> LoginAsync(UserLoginDto userLoginDto)
         {
             var user = await userRepository.GetUserByEmailAsync(userLoginDto.Email);
+            if(user == null)
+            {
+                return null;
+            }
 
             var passwordVerificationResult =
                 passwordHasher.VerifyHashedPassword(null, user.Password, userLoginDto.Password);
