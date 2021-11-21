@@ -1,0 +1,52 @@
+version: "3.7"
+services:
+  user-service-db: 
+    image: "mcr.microsoft.com/mssql/server"
+    # volumes:
+    #   - user-service-db:/app
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+
+  user-service: 
+    container_name: user-service
+    image: user-service
+    build:
+      context: ./src/user-service
+      target: prod
+    ports:
+      - 8001:80
+    depends_on: 
+      - user-service-db
+
+  exercise-service-db: 
+    image: "mcr.microsoft.com/mssql/server"
+    # volumes:
+    #   - exercise-service-db:/app
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+
+  exercise-service: 
+    container_name: exercise-service
+    image: exercise-service
+    build:
+      context: ./src/exercise-service
+      target: prod
+    ports:
+      - 8002:80
+    depends_on: 
+      - exercise-service-db
+      
+  # mssqlserver-service:
+  #   image: "mcr.microsoft.com/mssql/server"
+  #   volumes:
+  #     - mssql-server:/app
+  #   environment:
+  #       SA_PASSWORD: "Your_password123"
+  #       ACCEPT_EULA: "Y"
+      
+# volumes:
+#   mssql-server:
+#   user-service-db:
+#   exercise-service-db:

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExerciseVideoService.Core\ExerciseVideoService.Core.csproj" />
+    <ProjectReference Include="..\ExerciseVideoService.DAL\ExerciseVideoService.DAL.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+</Project>

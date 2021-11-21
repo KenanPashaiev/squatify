@@ -1,0 +1,2 @@
+docker build -t user-service .
+docker run -d -p 8001:80 --name user-service user-service
