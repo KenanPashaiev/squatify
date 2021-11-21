@@ -30,9 +30,9 @@ namespace ExerciseService.BL.Managers
             return exerciseSetDto;
         }
 
-        public async Task<IEnumerable<ExerciseSetDto>> GetExerciseSetByExerciseDayAsync(Guid userId, DateTime date)
+        public async Task<IEnumerable<ExerciseSetDto>> GetExerciseSetByDateRangeAsync(Guid userId, DateTime from, DateTime to)
         {
-            var exerciseSets = await exerciseSetRepository.GetByExerciseDayAsync(userId, date);
+            var exerciseSets = await exerciseSetRepository.GetByDateRangeAsync(userId, from, to);
             var exerciseSetDtos = mapper.Map<IEnumerable<ExerciseSetDto>>(exerciseSets);
             return exerciseSetDtos;
         }

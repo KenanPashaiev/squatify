@@ -9,7 +9,7 @@ namespace ExerciseService.BL.Managers
     {
         Task<ExerciseSetDto> GetExerciseSetAsync(Guid exerciseSetId);
 
-        Task<IEnumerable<ExerciseSetDto>> GetExerciseSetByExerciseDayAsync(Guid userId, DateTime date);
+        Task<IEnumerable<ExerciseSetDto>> GetExerciseSetByDateRangeAsync(Guid userId, DateTime from, DateTime to);
 
         Task<IEnumerable<ExerciseSetDto>> GetExerciseSetByExerciseTypeAsync(Guid userId, Guid exerciseTypeId);
 

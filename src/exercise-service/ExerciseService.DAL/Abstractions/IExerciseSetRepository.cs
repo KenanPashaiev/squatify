@@ -11,7 +11,7 @@ namespace ExerciseService.DAL.Abstractions
     {
         Task<ExerciseSet> GetAsync(Guid exerciseSetId);
 
-        Task<IEnumerable<ExerciseSet>> GetByExerciseDayAsync(Guid userId, DateTime date);
+        Task<IEnumerable<ExerciseSet>> GetByDateRangeAsync(Guid userId, DateTime from, DateTime to);
 
         Task<IEnumerable<ExerciseSet>> GetByExerciseTypeAsync(Guid userId, Guid exerciseTypeId);
 

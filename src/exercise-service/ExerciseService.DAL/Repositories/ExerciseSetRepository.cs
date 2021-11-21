@@ -23,11 +23,11 @@ namespace ExerciseService.DAL.Repositories
                 .SingleOrDefaultAsync(es => es.Id == exerciseSetId);
         }
 
-        public async Task<IEnumerable<ExerciseSet>> GetByExerciseDayAsync(Guid userId, DateTime date)
+        public async Task<IEnumerable<ExerciseSet>> GetByDateRangeAsync(Guid userId, DateTime from, DateTime to)
         {
             return await exerciseContext.ExerciseSets
                 .Include(es => es.ExerciseType)
-                .Where(es => es.UserId == userId && es.Date == date)
+                .Where(es => es.UserId == userId && from <= es.Date && es.Date <= to)
                 .ToListAsync();
         }
 
