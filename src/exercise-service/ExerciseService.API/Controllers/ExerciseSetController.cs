@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using ExerciseService.API.Services.Abstractions;
 using ExerciseService.BL.Managers;
 using ExerciseService.BL.Models.ExerciseSet;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +15,12 @@ namespace ExerciseService.API
     public class ExerciseSetController : ControllerBase
     {
         private readonly IExerciseSetManager exerciseSetManager;
+        private readonly IUserService userService;
 
-        public ExerciseSetController(IExerciseSetManager exerciseSetManager)
+        public ExerciseSetController(IExerciseSetManager exerciseSetManager, IUserService userService)
         {
             this.exerciseSetManager = exerciseSetManager;
+            this.userService = userService;
         }
 
         [Authorize(Roles = "Client, Admin")]
@@ -59,10 +62,10 @@ namespace ExerciseService.API
         [HttpPost]
         public async Task<IActionResult> AddExerciseSetAsync([FromBody]ExerciseSetCreateUpdateDto exerciseSetCreateUpdateDto)
         {
-            var role = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role);
-            var currentUserId = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-            if(role?.Value == "Client" && 
-            (currentUserId == null || currentUserId?.Value != exerciseSetCreateUpdateDto.UserId.ToString()))
+            var role = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? string.Empty;
+            var currentUserId = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var exerciseSetUser = await userService.GetUserAsync(exerciseSetCreateUpdateDto.UserId);
+            if(role == "Client" && currentUserId != exerciseSetUser?.Id.ToString())
             {
                 return Unauthorized();
             }
@@ -73,12 +76,12 @@ namespace ExerciseService.API
 
         [Authorize(Roles = "Client, Admin")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUserAsync(Guid id, ExerciseSetCreateUpdateDto exerciseSetCreateUpdateDto)
+        public async Task<IActionResult> UpdateExerciseSetAsync(Guid id, ExerciseSetCreateUpdateDto exerciseSetCreateUpdateDto)
         {
-            var role = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role);
-            var currentUserId = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-            if(role?.Value == "Client" && 
-            (currentUserId == null || currentUserId?.Value != exerciseSetCreateUpdateDto.UserId.ToString()))
+            var role = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? string.Empty;
+            var currentUserId = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var exerciseSetUser = await userService.GetUserAsync(exerciseSetCreateUpdateDto.UserId);
+            if(role == "Client" && currentUserId != exerciseSetUser?.Id.ToString())
             {
                 return Unauthorized();
             }
@@ -95,9 +98,23 @@ namespace ExerciseService.API
 
         [Authorize(Roles = "Client, Admin")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteAsync([FromRoute]Guid exerciseSetId)
+        public async Task<IActionResult> DeleteExerciseSetAsync([FromRoute]Guid exerciseSetId)
         {
-            var deletedExerciseSetId = await exerciseSetManager.DeleteExerciseSetAsync(exerciseSetId);
+            var existingExerciseSet = await exerciseSetManager.GetExerciseSetAsync(exerciseSetId);
+            if (existingExerciseSet == null)
+            {
+                return NotFound();
+            }
+
+            var role = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? string.Empty;
+            var currentUserId = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            var exerciseSetUser = await userService.GetUserAsync(existingExerciseSet.UserId);
+            if(role == "Client" && currentUserId != exerciseSetUser?.Id.ToString())
+            {
+                return Unauthorized();
+            }
+
+            var deletedExerciseSetId = await exerciseSetManager.DeleteExerciseSetAsync(existingExerciseSet.Id);
             return Ok(deletedExerciseSetId);
         }
     }

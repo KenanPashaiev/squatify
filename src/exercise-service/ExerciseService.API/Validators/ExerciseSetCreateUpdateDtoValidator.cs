@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ExerciseService.API.Services.Abstractions;
 using ExerciseService.BL.Managers;
 using ExerciseService.BL.Models.ExerciseSet;
 using FluentValidation;
@@ -23,11 +24,6 @@ namespace ExerciseService.API.Validators
         {
             this.exerciseTypeManager = exerciseTypeManager;
 
-            RuleFor(e => e.ExerciseTypeId)
-                .NotNull()
-                .MustAsync(ExerciseTypeExists)
-                .WithMessage(ExerciseTypeDoesNotExistMessage);
-
             RuleFor(e => e.Weight)
                 .InclusiveBetween(MinWeight, MaxWeight)
                 .When(e => e.Weight != null);
@@ -39,6 +35,14 @@ namespace ExerciseService.API.Validators
             RuleFor(e => e.Order)
                 .GreaterThan(0)
                 .When(e => e.Order != null);
+
+            RuleFor(e => e.ExerciseTypeId)
+                .NotNull()
+                .MustAsync(ExerciseTypeExists)
+                .WithMessage(ExerciseTypeDoesNotExistMessage);
+
+            RuleFor(e => e.UserId)
+                .NotNull();
         }
 
         public async Task<bool> ExerciseTypeExists(Guid exerciseTypeId, CancellationToken token)

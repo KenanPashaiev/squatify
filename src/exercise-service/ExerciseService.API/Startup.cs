@@ -15,6 +15,7 @@ using ExerciseService.DAL.Repositories;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using UserService.BL.Utils;
+using ExerciseService.API.Services.Abstractions;
 
 namespace ExerciseService.API
 {
@@ -31,7 +32,7 @@ namespace ExerciseService.API
         {
             services.AddControllers()
                 .AddFluentValidation();
-
+                
             services.AddTransient<IValidator<ExerciseSetCreateUpdateDto>, ExerciseSetCreateUpdateDtoValidator>();
             services.AddTransient<IValidator<ExerciseTypeCreateUpdateDto>, ExerciseTypeCreateUpdateDtoValidator>();
 
@@ -40,6 +41,8 @@ namespace ExerciseService.API
 
             services.AddScoped<IExerciseSetRepository, ExerciseSetRepository>();
             services.AddScoped<IExerciseTypeRepository, ExerciseTypeRepository>();
+
+            services.AddHttpClient<IUserService, Services.UserService>();
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>

@@ -35,8 +35,19 @@ services:
       target: prod
     ports:
       - 8002:80
+    environment:
+      USERSERVICE_ADDRESS: user-service
     depends_on: 
       - exercise-service-db
+
+  video-service: 
+    container_name: video-service
+    image: video-service
+    build:
+      context: ./src/video-service
+      target: prod
+    ports:
+      - 8003:80
       
   # mssqlserver-service:
   #   image: "mcr.microsoft.com/mssql/server"
