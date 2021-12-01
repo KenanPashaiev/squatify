@@ -14,8 +14,8 @@ using ExerciseService.DAL.Abstractions;
 using ExerciseService.DAL.Repositories;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using UserService.BL.Utils;
 using ExerciseService.API.Services.Abstractions;
+using ExerciseService.API.Utilities;
 
 namespace ExerciseService.API
 {

@@ -13,7 +13,7 @@ using FluentValidation;
 using UserService.BL.Models.User;
 using UserService.API.Validators;
 using UserService.BL.Managers;
-using UserService.BL.Utils;
+using UserService.BL.Utilities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 

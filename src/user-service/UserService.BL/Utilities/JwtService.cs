@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace UserService.BL.Utils
+namespace UserService.BL.Utilities
 {
     public class JwtService
     {

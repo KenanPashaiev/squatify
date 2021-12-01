@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
-namespace UserService.BL.Utils
+namespace ExerciseService.API.Utilities
 {
     public class AuthOptions
     {

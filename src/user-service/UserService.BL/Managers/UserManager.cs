@@ -6,7 +6,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using UserService.BL.Abstractions;
 using UserService.BL.Models.User;
-using UserService.BL.Utils;
+using UserService.BL.Utilities;
 using UserService.Core;
 using UserService.Core.Enums;
 using UserService.DAL.Abstractions;
