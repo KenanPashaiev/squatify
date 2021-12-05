@@ -1,3 +1,4 @@
+using ExerciseService.API.Extensions;
 using ExerciseService.DAL;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
