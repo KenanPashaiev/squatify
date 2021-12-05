@@ -40,6 +40,14 @@ services:
     depends_on: 
       - exercise-service-db
 
+  video-service-db: 
+    image: "mcr.microsoft.com/mssql/server"
+    # volumes:
+    #   - video-service-db:/app
+    environment:
+      SA_PASSWORD: "Your_password123"
+      ACCEPT_EULA: "Y"
+
   video-service: 
     container_name: video-service
     image: video-service
@@ -48,14 +56,10 @@ services:
       target: prod
     ports:
       - 8003:80
-      
-  # mssqlserver-service:
-  #   image: "mcr.microsoft.com/mssql/server"
-  #   volumes:
-  #     - mssql-server:/app
-  #   environment:
-  #       SA_PASSWORD: "Your_password123"
-  #       ACCEPT_EULA: "Y"
+    environment:
+      USERSERVICE_ADDRESS: user-service
+    depends_on: 
+      - video-service-db
       
 # volumes:
 #   mssql-server:

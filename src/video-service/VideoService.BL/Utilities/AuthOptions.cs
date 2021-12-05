@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
-namespace VideoService.API.Utilities
+namespace VideoService.BL.Utilities
 {
     public class AuthOptions
     {
