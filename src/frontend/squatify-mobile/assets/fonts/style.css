@@ -1,0 +1,9 @@
+@font-face {
+    font-family: 'Lufga';
+    src: local('Lufga Regular'), local('Lufga-Regular'),
+        url('Lufga-Regular.woff2') format('woff2'),
+        url('Lufga-Regular.woff') format('woff'),
+        url('Lufga-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style:italic;
+  }
