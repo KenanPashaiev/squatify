@@ -1,0 +1,15 @@
+[
+    {
+        "index": 1,
+        "timeline": [
+            {
+                "timeStamp": 0, //ms
+                "color": "#ff0000" //ms
+            },
+            {
+                "timeStamp": 120, //ms
+                "color": "#000000" //ms
+            },
+        ]
+    }
+]

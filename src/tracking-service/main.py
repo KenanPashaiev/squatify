@@ -1,173 +1,128 @@
+from os import stat
 import cv2
-import sys
 import numpy as np
 import time
-from shapely.geometry import LineString, MultiPolygon
-from shapely.ops import polygonize, unary_union
-
-def area(vertices):
-    ls = LineString(vertices)
-    # closed, non-simple
-    lr = LineString(ls.coords[:] + ls.coords[0:1])
-    lr.is_simple  # False
-    mls = unary_union(lr)
-    mls.geom_type  # MultiLineString'
-    resultArea = 0
-    i = 0
-    for poly in polygonize(mls):
-        polygon = list(zip(*poly.exterior.coords.xy))
-        n = len(polygon) # of corners
-        area = 0.0
-        for i in range(n):
-            j = (i + 1) % n
-            area += polygon[i][0] * polygon[j][1]
-            area -= polygon[j][0] * polygon[i][1]
-        resultArea += abs(area) / 2.0
-        i += 1
-    return resultArea
+import json
+from utils import * 
+from trackedFrame import * 
 
 if __name__ == "__main__":
-    tracker = cv2.TrackerCSRT_create()
-    exerciseDirection = 0 # 0 - down > up, 1 - up > down
-    video = cv2.VideoCapture("videos/deadlift1.mp4")
+    exerciseDirection = 1 # -1 - downUp, 1 - upDown
+    trackedFrames = []
 
-    if not video.isOpened():
-        print("Could not open video")
-        sys.exit()
-
-    ok, frame = video.read()
-    if not ok:
-        print("Cannot read video file")
-        sys.exit()
-
-    bbox = cv2.selectROI("Tracking",frame, False)
-    tracker.init(frame, bbox)
-    videoFrames = []
+    video, frame, tracker, ok = trackVideo("videos/squat1.mp4")
     frameHeight, frameLength = frame.shape[:2]
 
-    color = (0, 255, 0)
-
+    index = -1
     while ok:
+        index += 1
         ok, frame = video.read()
 
         if ok:
             ok, bbox = tracker.update(frame)
             p = (int(bbox[0] + bbox[2]/2), int(bbox[1] + bbox[3]/2))
-            videoFrames.append((frame.copy(), p))
-            cv2.polylines(frame, np.int32([[frame[1] for frame in videoFrames]]), False, color, thickness=2, lineType=cv2.LINE_AA)
+            currentTrackedFrame = TrackedFrame(frame.copy(), index, p[0], p[1], 0, 0)
+            trackedFrames.append(currentTrackedFrame)
+
+            cv2.polylines(frame, np.int32([[(trackedFrame.x, trackedFrame.y) for trackedFrame in trackedFrames]]), False, (0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
             cv2.imshow("Tracking", frame)
         k = cv2.waitKey(1) & 0xFF
         if k == 27:
             break
     
-    #minHeight > startHeight
-    #maxHeight > endHeight
-    trackPoints = [frame[1] for frame in videoFrames]
-    startHeight = min([point[1] for point in trackPoints]) if exerciseDirection == 1 else max([point[1] for point in trackPoints])
-    endHeight = max([point[1] for point in trackPoints]) if exerciseDirection == 1 else min([point[1] for point in trackPoints])
-    pathHeight = abs(startHeight - endHeight)
-    probableRepHeight = startHeight + np.int32(pathHeight * 0.1 * (1 if exerciseDirection == 1 else -1))
-    bottomOutHeight = endHeight - np.int32(pathHeight * 0.1 * (1 if exerciseDirection == 1 else -1))
-    repDelta = np.int32(pathHeight * 0.5 * (1 if exerciseDirection == 1 else -1))
-    repHeight = startHeight + repDelta
-    
-    repCount = 0
-    isBottomedOut = False
-    isProbableRep = False
-    isRep = False
-    started = False
-    currentRepPoints = []
-    reps = []
-    pathArea = 0
-    repFinishPoint = videoFrames[0][1][1]
-    repState = 0 # 0 - not started, 1 - going down, 2 - bottomed out, 3 - going up
-    firstHalfPoints = []
-    secondHalfPoints = []
-    repStateToString = {
-        0: 'not started',
-        1: 'down' if exerciseDirection == 1 else 'up',
-        2: 'bottomed out',
-        3: 'up' if exerciseDirection == 1 else 'down'
-    }
-    repQuality = 0
-    for frame in videoFrames:
-        framePoint = frame[1]
-        pointHigherThenProbableRepHeight = framePoint[1] > probableRepHeight if exerciseDirection == 1 else framePoint[1] < probableRepHeight 
-        pointHigherThenRepHeight = framePoint[1] > repHeight if exerciseDirection == 1 else framePoint[1] < repHeight
-        pointHigherThenBottomOutHeight = framePoint[1] > bottomOutHeight if exerciseDirection == 1 else framePoint[1] < bottomOutHeight
+    trackPoints = getPointsFromTrackedFrames(trackedFrames)
+    pathStart = min([point[1] for point in trackPoints]) if exerciseDirection == 1 else max([point[1] for point in trackPoints])
+    pathEnd = max([point[1] for point in trackPoints]) if exerciseDirection == 1 else min([point[1] for point in trackPoints])
+    pathHeight = abs(pathStart - pathEnd)
 
-        if not pointHigherThenProbableRepHeight and not started:
+    relPathStart = 0
+    relPathEnd = abs(pathStart - pathEnd)
+    relProbableRepStart = np.int32(pathHeight * 0.1)
+    relProbableRepEnd = relPathEnd - np.int32(pathHeight * 0.1)
+    relRepVerified = np.int32(relPathEnd / 2)
+
+    state = 0
+    repQuality = 0
+    repCount = 0
+    started = False
+    optimalPath = [(0,0)]
+    measurableRepStartPoints = [(0,0)]
+    measurableRepEndPoints = [(0,0)]
+    for trackedFrame in trackedFrames:
+        repProgress = abs(trackedFrame.y - pathStart)
+        pointHigherThanProbableRepStart = repProgress > relProbableRepStart
+        pointHigherThenProbableRepEnd = repProgress > relProbableRepStart
+        pointHigherThenRepHeight = repProgress > relRepVerified
+
+        if repProgress < relProbableRepStart and not started: # check if user started the rep
             started = True
 
         if started:
-            if pointHigherThenProbableRepHeight:
-                if not isProbableRep:
-                    reps.append((currentRepPoints.copy(), isRep))
-                    currentRepPoints.clear()
-                    repState = 1
-                if isProbableRep and not isRep and pointHigherThenRepHeight:
-                    isRep = True
-                    repState = 1
-                    repCount += 1
-                if isProbableRep and isRep and not isBottomedOut and pointHigherThenBottomOutHeight:
-                    isBottomedOut = True
-                    repState = 2
-                if isProbableRep and isRep and isBottomedOut and not pointHigherThenBottomOutHeight:
-                    isBottomedOut = False
-                    repState = 3
-                    resultArea = area(firstHalfPoints + [(currentRepPoints[0][0], firstHalfPoints[-1][1])])
-                    repQuality = (1 - resultArea/(pathHeight*pathHeight/3))*100
-                isProbableRep = True
-            elif not pointHigherThenProbableRepHeight:
-                isBottomedOut = False
-                repState = 0
-                if isProbableRep and isRep:
-                    reps.append((currentRepPoints.copy(), isRep))
-                    currentRepPoints.clear()
-                    firstHalfPoints.clear()
-                    secondHalfPoints.clear()
-                    isRep = False
-                if isProbableRep and not isRep:
-                    currentRepPoints.clear()
-                    isProbableRep = False
+            if repProgress > relProbableRepStart:
+                if repProgress > relRepVerified:
+                    if repProgress > relProbableRepEnd:
+                        state = 3
+                    elif state == 3:
+                        state = 4
+                    elif state == 1:
+                        state = 2
+                        setTrackedFramesState(trackedFrames, trackedFrame.index, state)
+                elif state == 4:
+                    state = 5
+                    setTrackedFramesState(trackedFrames, trackedFrame.index, state)
+                elif state == 0:
+                    state = 1
+            elif state == 2:
+                state = 0
+                setTrackedFramesState(trackedFrames, trackedFrame.index, state)
+            elif state == 5:
+                repCount += 1
+                setTrackedFramesRepNumber(trackedFrames, trackedFrame.index, repCount)
 
-        currentRepPoints.append(framePoint)
+                repStartPoints = getRepStartPoints(trackedFrames, repCount)
+                repEndPoints = getRepEndPoints(trackedFrames, repCount)
 
-        if repState == 1:
-            firstHalfPoints.append(framePoint)
-            #cv2.polylines(frame[0], np.int32([downHalfPoints + [(currentRepPoints[0][0], downHalfPoints[-1][1])]]), True, color, thickness=2, lineType=cv2.LINE_AA)
-        elif repState == 3:
-            secondHalfPoints.append(framePoint)
-            #cv2.polylines(frame[0], np.int32([[(currentRepPoints[0][0], upHalfPoints[0][1])] + upHalfPoints + [(currentRepPoints[0][0], upHalfPoints[-1][1])]]), True, color, thickness=2, lineType=cv2.LINE_AA)
+                probableRepStart = pathStart+exerciseDirection*relProbableRepStart
+                probableRepEnd = pathStart+exerciseDirection*relProbableRepEnd
+                optimalPath = getPerpendicularLine(probableRepStart, probableRepEnd, repStartPoints[0][0], exerciseDirection)
 
-        if isProbableRep:
-            trajectoryLine = [currentRepPoints[0], (currentRepPoints[0][0], endHeight)]
-            #cv2.line(frame[0], frame[1], interseptPoint, (0, 255, 0), 2)
-            cv2.line(frame[0], trajectoryLine[0], trajectoryLine[1], (255, 0, 0), 2)
+                measurableRepStartPoints = connectVertices(repStartPoints, optimalPath[::-1])
+                measurableRepEndPoints = connectVertices(repEndPoints, optimalPath)
                 
+                repStartPathArea = area(measurableRepStartPoints)
+                repEndPathArea = area(measurableRepEndPoints)
+
+                repQuality = np.int32((1 - ((repStartPathArea+repEndPathArea) / (pathHeight*pathHeight))) * 100 )
+                state = 0
+            
+        trackedFrame.state = state
+
         #rep state    
-        cv2.putText(frame[0], repStateToString[repState], (100,120), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(255,255,255),2)
+        cv2.putText(trackedFrame.frame, repStateToString[trackedFrame.state], (100,120), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(255,255,255),2)
         #rep count text
-        cv2.putText(frame[0], str(repCount), (100,80), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(255,255,255),2)
+        cv2.putText(trackedFrame.frame, str(repCount), (100,80), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(255,255,255),2)
         #rep quality text
-        cv2.putText(frame[0], str(repQuality), (100,100), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(255,255,255),2)
+        cv2.putText(trackedFrame.frame, str(repQuality), (100,100), cv2.FONT_HERSHEY_SIMPLEX, 0.75,(255,255,255),2)
         #barbell point
-        cv2.circle(frame[0], frame[1], 3, (55*repCount, 0, 0), 2)
-        #probable rep height line
-        cv2.line(frame[0], (0, probableRepHeight), (frameLength, probableRepHeight), (0, 255, 0), 1)
-        #rep height line
-        cv2.line(frame[0], (0, repHeight), (frameLength, repHeight), (0, 0, 255), 1)
-        #current rep path
-        color = (110, 110, 110) if not isProbableRep else (0, 255, 0) if isRep else (0, 255, 255) 
-        cv2.polylines(frame[0], np.int32([currentRepPoints]), False, color, thickness=2, lineType=cv2.LINE_AA)
-        #previous rep paths
-        #for rep in reps[-1:]:
-            #color = (0, 255, 0) if rep[1] else (110, 110, 110) 
-            #cv2.polylines(frame[0], np.int32([rep[0]]), False, color, thickness=2, lineType=cv2.LINE_AA)
+        cv2.circle(trackedFrame.frame, (trackedFrame.x, trackedFrame.y), 3, (55*repCount, 255, 255), 2)
+        #probable rep start 
+        cv2.line(trackedFrame.frame, (0, pathStart+exerciseDirection*relProbableRepStart), (frameLength, pathStart+exerciseDirection*relProbableRepStart), (0, 255, 0), 1)
+        #probable rep end
+        cv2.line(trackedFrame.frame, (0, pathStart+exerciseDirection*relProbableRepEnd), (frameLength, pathStart+exerciseDirection*relProbableRepEnd), (0, 255, 0), 1)
+        #rep center
+        cv2.line(trackedFrame.frame, (0, pathStart+exerciseDirection*relRepVerified), (frameLength, pathStart+exerciseDirection*relRepVerified), (0, 0, 255), 1)
+        
+        cv2.polylines(trackedFrame.frame, np.int32([optimalPath]), False, (255, 0, 0), thickness=1, lineType=cv2.LINE_AA)
+
+        for frameToDisplay in trackedFrames[trackedFrame.index-min(20, trackedFrame.index):trackedFrame.index]:
+            cv2.circle(trackedFrame.frame, (frameToDisplay.x, frameToDisplay.y), 1, repStateToColor[frameToDisplay.state], 2)
+
 
         time.sleep(0.02)
-        cv2.imshow("Tracking", frame[0])
+        cv2.imshow("Tracking", trackedFrame.frame)
         k = cv2.waitKey(1) & 0xFF
         if k == 27:
             break
 
+    with open('data.json', 'w') as f:
+        json.dump(trackedFrames.copy(), f, cls=TrackedFrameEncoder)
